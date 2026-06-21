@@ -24,14 +24,17 @@ ChartJS.register(
 function HomePage({ onLogout }) {
     const [transactions, setTransactions] = useState([]);
 
-    const [incomeMonth, setIncomeMonth] = useState("");
+    const [incomeDate, setIncomeDate] = useState("");
     const [incomeSource, setIncomeSource] = useState("");
     const [incomeAmount, setIncomeAmount] = useState("");
 
-    const [expenseMonth, setExpenseMonth] = useState("");
+    const [expenseDate, setExpenseDate] = useState("");
     const [expenseType, setExpenseType] = useState("Expense");
     const [expenseCategory, setExpenseCategory] = useState("");
     const [expenseAmount, setExpenseAmount] = useState("");
+
+    const [editingIncomeId, setEditingIncomeId] = useState(null);
+    const [editingTransactionId, setEditingTransactionId] = useState(null);
 
     function getTotal(type) {
         return transactions
@@ -47,32 +50,52 @@ function HomePage({ onLogout }) {
     const remainingBudget =
         totalIncome - (totalExpenses + totalInvestments + totalSavings);
 
-    function addIncome() {
+    function addOrUpdateIncome() {
         const amount = parseFloat(incomeAmount);
 
-        if (!incomeMonth || !incomeSource.trim() || amount <= 0 || isNaN(amount)) {
+        if (!incomeDate || !incomeSource.trim() || amount <= 0 || isNaN(amount)) {
             alert("Please enter valid income details");
             return;
         }
 
-        const newTransaction = {
-            id: Date.now(),
-            type: "Income",
-            month: incomeMonth,
-            category: incomeSource.trim(),
-            amount,
-        };
+        if (editingIncomeId !== null) {
+            const updatedTransactions = transactions.map((transaction) => {
+                if (transaction.id === editingIncomeId) {
+                    return {
+                        ...transaction,
+                        date: incomeDate,
+                        category: incomeSource.trim(),
+                        amount,
+                    };
+                }
 
-        setTransactions([...transactions, newTransaction]);
+                return transaction;
+            });
+
+            setTransactions(updatedTransactions);
+            setEditingIncomeId(null);
+        } else {
+            const newTransaction = {
+                id: Date.now(),
+                type: "Income",
+                date: incomeDate,
+                category: incomeSource.trim(),
+                amount,
+            };
+
+            setTransactions([...transactions, newTransaction]);
+        }
+
+        setIncomeDate("");
         setIncomeSource("");
         setIncomeAmount("");
     }
 
-    function addExpense() {
+    function addOrUpdateExpense() {
         const amount = parseFloat(expenseAmount);
 
         if (
-            !expenseMonth ||
+            !expenseDate ||
             !expenseCategory.trim() ||
             amount <= 0 ||
             isNaN(amount)
@@ -81,15 +104,105 @@ function HomePage({ onLogout }) {
             return;
         }
 
-        const newTransaction = {
-            id: Date.now(),
-            type: expenseType,
-            month: expenseMonth,
-            category: expenseCategory.trim(),
-            amount,
-        };
+        if (editingTransactionId !== null) {
+            const updatedTransactions = transactions.map((transaction) => {
+                if (transaction.id === editingTransactionId) {
+                    return {
+                        ...transaction,
+                        type: expenseType,
+                        date: expenseDate,
+                        category: expenseCategory.trim(),
+                        amount,
+                    };
+                }
 
-        setTransactions([...transactions, newTransaction]);
+                return transaction;
+            });
+
+            setTransactions(updatedTransactions);
+            setEditingTransactionId(null);
+        } else {
+            const newTransaction = {
+                id: Date.now(),
+                type: expenseType,
+                date: expenseDate,
+                category: expenseCategory.trim(),
+                amount,
+            };
+
+            setTransactions([...transactions, newTransaction]);
+        }
+
+        setExpenseDate("");
+        setExpenseType("Expense");
+        setExpenseCategory("");
+        setExpenseAmount("");
+    }
+
+    function deleteTransaction(id) {
+        const confirmDelete = window.confirm("Are you sure you want to delete this record?");
+
+        if (!confirmDelete) {
+            return;
+        }
+
+        setTransactions(
+            transactions.filter((transaction) => transaction.id !== id)
+        );
+
+        if (editingIncomeId === id) {
+            setEditingIncomeId(null);
+            setIncomeDate("");
+            setIncomeSource("");
+            setIncomeAmount("");
+        }
+
+        if (editingTransactionId === id) {
+            setEditingTransactionId(null);
+            setExpenseDate("");
+            setExpenseType("Expense");
+            setExpenseCategory("");
+            setExpenseAmount("");
+        }
+    }
+
+    function startIncomeUpdate(transaction) {
+        setEditingIncomeId(transaction.id);
+        setIncomeDate(transaction.date);
+        setIncomeSource(transaction.category);
+        setIncomeAmount(transaction.amount.toString());
+
+        setEditingTransactionId(null);
+        setExpenseDate("");
+        setExpenseType("Expense");
+        setExpenseCategory("");
+        setExpenseAmount("");
+    }
+
+    function startTransactionUpdate(transaction) {
+        setEditingTransactionId(transaction.id);
+        setExpenseDate(transaction.date);
+        setExpenseType(transaction.type);
+        setExpenseCategory(transaction.category);
+        setExpenseAmount(transaction.amount.toString());
+
+        setEditingIncomeId(null);
+        setIncomeDate("");
+        setIncomeSource("");
+        setIncomeAmount("");
+    }
+
+    function cancelIncomeUpdate() {
+        setEditingIncomeId(null);
+        setIncomeDate("");
+        setIncomeSource("");
+        setIncomeAmount("");
+    }
+
+    function cancelTransactionUpdate() {
+        setEditingTransactionId(null);
+        setExpenseDate("");
+        setExpenseType("Expense");
         setExpenseCategory("");
         setExpenseAmount("");
     }
@@ -246,7 +359,7 @@ function HomePage({ onLogout }) {
 
                             <li className="nav-item">
                                 <a className="nav-link" href="#expenses">
-                                    Expenses
+                                    Transactions
                                 </a>
                             </li>
 
@@ -349,15 +462,15 @@ function HomePage({ onLogout }) {
 
                             <div className="mb-3">
                                 <input
-                                    type="month"
+                                    type="date"
                                     className="form-control my-2"
-                                    value={incomeMonth}
-                                    onChange={(event) => setIncomeMonth(event.target.value)}
+                                    value={incomeDate}
+                                    onChange={(event) => setIncomeDate(event.target.value)}
                                 />
 
                                 <input
                                     type="text"
-                                    placeholder="Source"
+                                    placeholder="Income Source"
                                     className="form-control my-2"
                                     value={incomeSource}
                                     onChange={(event) => setIncomeSource(event.target.value)}
@@ -371,36 +484,86 @@ function HomePage({ onLogout }) {
                                     onChange={(event) => setIncomeAmount(event.target.value)}
                                 />
 
-                                <button className="btn btn-success w-100" onClick={addIncome}>
-                                    Add Income
+                                <button className="btn btn-success w-100" onClick={addOrUpdateIncome}>
+                                    {editingIncomeId !== null ? "Update Income" : "Add Income"}
                                 </button>
+
+                                {editingIncomeId !== null && (
+                                    <button
+                                        className="btn btn-secondary w-100 mt-2"
+                                        onClick={cancelIncomeUpdate}
+                                    >
+                                        Cancel Update
+                                    </button>
+                                )}
                             </div>
 
                             <div className="card">
                                 <div className="card-body">
                                     <h5 className="card-title">Income History</h5>
 
-                                    <ul className="list-group">
-                                        {incomeTransactions.map((transaction) => (
-                                            <li className="list-group-item" key={transaction.id}>
-                                                {transaction.month} - {transaction.category}: $
-                                                {transaction.amount.toFixed(2)}
-                                            </li>
-                                        ))}
-                                    </ul>
+                                    {editingIncomeId !== null && (
+                                        <p className="text-primary mb-2">
+                                            You are editing an income record.
+                                        </p>
+                                    )}
+
+                                    <table className="table table-bordered table-hover">
+                                        <thead className="table-light">
+                                            <tr>
+                                                <th>Date</th>
+                                                <th>Income Source</th>
+                                                <th>Amount ($)</th>
+                                                <th>Action</th>
+                                            </tr>
+                                        </thead>
+
+                                        <tbody>
+                                            {incomeTransactions.length === 0 ? (
+                                                <tr>
+                                                    <td colSpan="4" className="text-center text-muted">
+                                                        No income added yet.
+                                                    </td>
+                                                </tr>
+                                            ) : (
+                                                incomeTransactions.map((transaction) => (
+                                                    <tr key={transaction.id}>
+                                                        <td>{transaction.date}</td>
+                                                        <td>{transaction.category}</td>
+                                                        <td>${transaction.amount.toFixed(2)}</td>
+                                                        <td>
+                                                            <button
+                                                                className="btn btn-sm btn-outline-primary me-2"
+                                                                onClick={() => startIncomeUpdate(transaction)}
+                                                            >
+                                                                Update
+                                                            </button>
+
+                                                            <button
+                                                                className="btn btn-sm btn-outline-danger"
+                                                                onClick={() => deleteTransaction(transaction.id)}
+                                                            >
+                                                                Delete
+                                                            </button>
+                                                        </td>
+                                                    </tr>
+                                                ))
+                                            )}
+                                        </tbody>
+                                    </table>
                                 </div>
                             </div>
                         </section>
 
                         <section id="expenses" className="visible">
-                            <h2 className="section-heading">Expenses</h2>
+                            <h2 className="section-heading">Transactions</h2>
 
                             <div className="mb-3">
                                 <input
-                                    type="month"
+                                    type="date"
                                     className="form-control my-2"
-                                    value={expenseMonth}
-                                    onChange={(event) => setExpenseMonth(event.target.value)}
+                                    value={expenseDate}
+                                    onChange={(event) => setExpenseDate(event.target.value)}
                                 />
 
                                 <select
@@ -415,7 +578,7 @@ function HomePage({ onLogout }) {
 
                                 <input
                                     type="text"
-                                    placeholder="Category"
+                                    placeholder="Category / For What"
                                     className="form-control my-2"
                                     value={expenseCategory}
                                     onChange={(event) => setExpenseCategory(event.target.value)}
@@ -429,34 +592,73 @@ function HomePage({ onLogout }) {
                                     onChange={(event) => setExpenseAmount(event.target.value)}
                                 />
 
-                                <button className="btn btn-danger w-100" onClick={addExpense}>
-                                    Add Transaction
+                                <button className="btn btn-danger w-100" onClick={addOrUpdateExpense}>
+                                    {editingTransactionId !== null ? "Update Transaction" : "Add Transaction"}
                                 </button>
+
+                                {editingTransactionId !== null && (
+                                    <button
+                                        className="btn btn-secondary w-100 mt-2"
+                                        onClick={cancelTransactionUpdate}
+                                    >
+                                        Cancel Update
+                                    </button>
+                                )}
                             </div>
 
                             <div className="card">
                                 <div className="card-body">
                                     <h5 className="card-title">Transaction History</h5>
 
-                                    <table className="table table-bordered">
-                                        <thead>
+                                    {editingTransactionId !== null && (
+                                        <p className="text-primary mb-2">
+                                            You are editing a transaction record.
+                                        </p>
+                                    )}
+
+                                    <table className="table table-bordered table-hover">
+                                        <thead className="table-light">
                                             <tr>
                                                 <th>Date</th>
                                                 <th>Type</th>
-                                                <th>Category</th>
+                                                <th>Category / For What</th>
                                                 <th>Amount ($)</th>
+                                                <th>Action</th>
                                             </tr>
                                         </thead>
 
                                         <tbody>
-                                            {expenseLikeTransactions.map((transaction) => (
-                                                <tr key={transaction.id}>
-                                                    <td>{transaction.month}</td>
-                                                    <td>{transaction.type}</td>
-                                                    <td>{transaction.category}</td>
-                                                    <td>${transaction.amount.toFixed(2)}</td>
+                                            {expenseLikeTransactions.length === 0 ? (
+                                                <tr>
+                                                    <td colSpan="5" className="text-center text-muted">
+                                                        No transactions added yet.
+                                                    </td>
                                                 </tr>
-                                            ))}
+                                            ) : (
+                                                expenseLikeTransactions.map((transaction) => (
+                                                    <tr key={transaction.id}>
+                                                        <td>{transaction.date}</td>
+                                                        <td>{transaction.type}</td>
+                                                        <td>{transaction.category}</td>
+                                                        <td>${transaction.amount.toFixed(2)}</td>
+                                                        <td>
+                                                            <button
+                                                                className="btn btn-sm btn-outline-primary me-2"
+                                                                onClick={() => startTransactionUpdate(transaction)}
+                                                            >
+                                                                Update
+                                                            </button>
+
+                                                            <button
+                                                                className="btn btn-sm btn-outline-danger"
+                                                                onClick={() => deleteTransaction(transaction.id)}
+                                                            >
+                                                                Delete
+                                                            </button>
+                                                        </td>
+                                                    </tr>
+                                                ))
+                                            )}
                                         </tbody>
                                     </table>
                                 </div>
